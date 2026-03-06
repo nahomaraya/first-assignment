@@ -1,5 +1,6 @@
 const STORAGE_KEY = 'activity-tracker-data';
 const MAX_EVENTS = 100;
+const MAX_TIMELINE_DISPLAY = 10;
 
 class ActivityTracker {
     constructor(options = {}) {
@@ -29,7 +30,8 @@ class ActivityTracker {
             stats: {
                 pageViews: 0,
                 clicks: 0,
-                formSubmits: 0
+                formSubmits: 0,
+                sessionDuration: 0
             },
             events: []
         }
@@ -37,6 +39,10 @@ class ActivityTracker {
     
     isValidSessionData(data) {
         return data && data.sessionId && data.events;
+    }
+
+    updateSessionDuration() {
+        this.data.stats.sessionDurationMs = Math.max(0, Date.now() - this.data.startedAt);
     }
 
     loadSession() {
@@ -80,12 +86,29 @@ class ActivityTracker {
         if (type === 'pageview') this.data.stats.pageViews += 1;
         else if (type === 'click') this.data.stats.clicks += 1;
         else if (type === 'formSubmit') this.data.stats.formSubmits += 1;
+        this.updateSessionDuration();
         this.persist();
         this.refreshWidget();
     }
 
-     getPageLabel() {
+    getPageLabel() {
         return window.location.pathname.split('/').pop() || 'index.html';
+    }
+
+    formatDuration(time) {
+        const totalSeconds = Math.floor(time / 1000);
+        const h = Math.floor(totalSeconds / 3600);
+        const m = Math.floor((totalSeconds % 3600) / 60);
+        const s = totalSeconds % 60;
+        return [h, m, s].map(v => String(v).padStart(2, '0')).join(':');
+    }
+
+    formatTimestamp(time) {
+        try {
+            return new Date(time).toLocaleString();
+        } catch (_) {
+            return 'Invalid date';
+        }
     }
 
     renderWidget() {
@@ -139,6 +162,7 @@ class ActivityTracker {
         this.widgetElements.clicks.textContent = `Clicks: ${this.data.stats.clicks}`;
         this.widgetElements.formSubmits.textContent = `Forms: ${this.data.stats.formSubmits}`;
         this.widgetElements.timelineWrapper.hidden = !this.data.toggleTimeline;
+        this.widgetElements.sessionDuration.textContent = `Duration: ${this.formatDuration(this.data.stats.sessionDurationMs)}`;
         this.widgetElements.toggleBtn.textContent = this.data.toggleTimeline ? 'Hide Timeline' : 'Show Timeline';
         this.widgetElements.toggleBtn.setAttribute('aria-expanded', String(this.data.toggleTimeline));
 
@@ -160,6 +184,9 @@ class ActivityTracker {
         const li = document.createElement('li');
         li.className = 'activity-tracker-event';
 
+        const time = document.createElement('span');
+        time.className = 'event-time';
+        time.textContent = this.formatTimestamp(event.timestamp);
 
         const type = document.createElement('span');
         type.className = 'event-type';
@@ -173,7 +200,7 @@ class ActivityTracker {
         page.className = 'event-page';
         page.textContent = event.page || '';
 
-        li.append(type, details, page);
+        li.append(time, type, details, page);
         return li;
     }
 
@@ -220,8 +247,6 @@ class ActivityTracker {
   
 }
 
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = ActivityTracker;
-} else {
-    window.ActivityTracker = ActivityTracker;
-}
+document.addEventListener('DOMContentLoaded', () => {
+        window.__activityTrackerInstance = new ActivityTracker();
+});

@@ -70,9 +70,7 @@
     <script src="cart.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-             if (!window.__activityTrackerInstance) {
-                window.__activityTrackerInstance = new ActivityTracker();
-            }   
+            const tracker = new ActivityTracker();
         });
     </script>
 </body>
