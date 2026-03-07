@@ -9,12 +9,14 @@ class ActivityTracker {
         this.storageKey = options.storageKey || STORAGE_KEY;
         this.maxEvents = options.maxEvents || MAX_EVENTS;
         this.data = this.loadSession();
+        this.durationIntervalId = null;
 
         this.widgetElements = null;
         this.renderWidget();
         this.attachEventListeners();
 
         this.recordEvent('pageview', this.getPageLabel());
+        this.startSessionDurationTimer();
 
         ActivityTracker.instance = this;
     }
@@ -42,7 +44,9 @@ class ActivityTracker {
     }
 
     updateSessionDuration() {
-        this.data.stats.sessionDurationMs = Math.max(0, Date.now() - this.data.startedAt);
+        const durationMs = Math.max(0, Date.now() - this.data.startedAt);
+        this.data.stats.sessionDuration = durationMs;
+        this.data.stats.sessionDurationMs = durationMs;
     }
 
     loadSession() {
@@ -112,6 +116,27 @@ class ActivityTracker {
         }
     }
 
+    getSessionDurationMs() {
+        return this.data.stats.sessionDuration ?? this.data.stats.sessionDurationMs ?? 0;
+    }
+
+    updateDurationDisplay() {
+        if (!this.widgetElements || !this.widgetElements.sessionDuration) return;
+        this.widgetElements.sessionDuration.textContent = `Duration: ${this.formatDuration(this.getSessionDurationMs())}`;
+    }
+
+    startSessionDurationTimer() {
+        if (this.durationIntervalId) return;
+
+        this.updateSessionDuration();
+        this.updateDurationDisplay();
+
+        this.durationIntervalId = window.setInterval(() => {
+            this.updateSessionDuration();
+            this.updateDurationDisplay();
+        }, 1000);
+    }
+
     renderWidget() {
         if (this.widgetElements) return;
 
@@ -163,7 +188,7 @@ class ActivityTracker {
         this.widgetElements.clicks.textContent = `Clicks: ${this.data.stats.clicks}`;
         this.widgetElements.formSubmits.textContent = `Forms: ${this.data.stats.formSubmits}`;
         this.widgetElements.timelineWrapper.hidden = !this.data.toggleTimeline;
-        this.widgetElements.sessionDuration.textContent = `Duration: ${this.formatDuration(this.data.stats.sessionDurationMs)}`;
+        this.updateDurationDisplay();
         this.widgetElements.toggleBtn.textContent = this.data.toggleTimeline ? 'Hide Timeline' : 'Show Timeline';
         this.widgetElements.toggleBtn.setAttribute('aria-expanded', String(this.data.toggleTimeline));
 
