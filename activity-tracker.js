@@ -76,6 +76,7 @@ class ActivityTracker {
         this.data.events.push({
             type,
             details,
+            page: this.getPageLabel(),
             timestamp: Date.now()
         });
         
