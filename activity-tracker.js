@@ -10,9 +10,11 @@ class ActivityTracker {
         this.maxEvents = options.maxEvents || MAX_EVENTS;
         this.data = this.loadSession();
         this.durationIntervalId = null;
+        this._persistTimer = null;
 
         this.widgetElements = null;
         this.renderWidget();
+        this.refreshWidget();
         this.attachEventListeners();
 
         this.recordEvent('pageview', getPageLabel());
@@ -22,9 +24,25 @@ class ActivityTracker {
     }
 
     persist() {
-        try{
+        if (this._persistTimer) clearTimeout(this._persistTimer);
+        this._persistTimer = setTimeout(() => {
+            this._persistTimer = null;
+            try {
+                localStorage.setItem(this.storageKey, JSON.stringify(this.data));
+            } catch (error) {
+                console.error('Failed to persist session:', error);
+            }
+        }, 300);
+    }
+
+    persistImmediately() {
+        if (this._persistTimer) {
+            clearTimeout(this._persistTimer);
+            this._persistTimer = null;
+        }
+        try {
             localStorage.setItem(this.storageKey, JSON.stringify(this.data));
-        } catch (error){
+        } catch (error) {
             console.error('Failed to persist session:', error);
         }
     }
@@ -82,12 +100,13 @@ class ActivityTracker {
     
  
     recordEvent(type, details) {
-        this.data.events.push({
+        const event = {
             type,
             details,
             page: getPageLabel(),
             timestamp: Date.now()
-        });
+        };
+        this.data.events.push(event);
         
         this.data.lastActivityAt = Date.now();
         if (this.data.events.length > this.maxEvents) {
@@ -98,7 +117,8 @@ class ActivityTracker {
         else if (type === 'formSubmit') this.data.stats.formSubmits += 1;
         this.updateSessionDuration();
         this.persist();
-        this.refreshWidget();
+        this.refreshStats();
+        this.appendEventToTimeline(event);
     }
 
 
@@ -106,6 +126,29 @@ class ActivityTracker {
     updateDurationDisplay() {
         if (!this.widgetElements || !this.widgetElements.sessionDuration) return;
         this.widgetElements.sessionDuration.textContent = `Duration: ${formatDuration(this.getSessionDurationMs())}`;
+    }
+
+    refreshStats() {
+        if (!this.widgetElements) return;
+        this.widgetElements.pageViews.textContent = `Pages: ${this.data.stats.pageViews}`;
+        this.widgetElements.clicks.textContent = `Clicks: ${this.data.stats.clicks}`;
+        this.widgetElements.formSubmits.textContent = `Forms: ${this.data.stats.formSubmits}`;
+        this.updateDurationDisplay();
+    }
+
+    appendEventToTimeline(event) {
+        if (!this.widgetElements || !this.widgetElements.timelineList) return;
+        const list = this.widgetElements.timelineList;
+        // Remove "No activity yet" placeholder if present
+        if (list.firstChild && list.firstChild.textContent.trim() === 'No activity yet.') {
+            list.removeChild(list.firstChild);
+        }
+        // Prepend the new event item
+        list.insertBefore(this.createEventItemElement(event), list.firstChild);
+        // Trim excess items beyond the display limit
+        while (list.children.length > MAX_TIMELINE_DISPLAY) {
+            list.removeChild(list.lastChild);
+        }
     }
 
     startSessionDurationTimer() {
@@ -223,10 +266,11 @@ class ActivityTracker {
         document.addEventListener('click', this.handleDocumentClick);
         document.addEventListener('submit', this.handleDocumentSubmit);
         this.widgetElements.toggleBtn.addEventListener('click', this.handleToggleTimeline);
+        window.addEventListener('beforeunload', this.handleBeforeUnload);
     }
 
     isWidgetElement(target) {
-        return Object.values(this.widgetElements).some(element => element && element.contains(target));
+        return this.widgetElements.aside.contains(target);
     }
 
     getClickTargetLabel(target) {
@@ -267,6 +311,10 @@ class ActivityTracker {
         this.data.toggleTimeline = !this.data.toggleTimeline;
         this.persist();
         this.refreshWidget();
+    }
+
+    handleBeforeUnload = () => {
+        this.persistImmediately();
     }
   
 }

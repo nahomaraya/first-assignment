@@ -112,7 +112,7 @@
 
         function loadProducts(filteredProducts = products) {
             const grid = document.getElementById('products-grid');
-            grid.innerHTML = '';
+            const fragment = document.createDocumentFragment();
 
             filteredProducts.forEach(product => {
                 const card = document.createElement('div');
@@ -131,8 +131,10 @@
                         </div>
                     </div>
                 `;
-                grid.appendChild(card);
+                fragment.appendChild(card);
             });
+
+            grid.replaceChildren(fragment);
         }
 
         function setupFilters() {
