@@ -14,4 +14,4 @@
 - Incremental timeline updates. Only 4 stat textContent assignments + one insertBefore happen per event; refreshWidget() (full rebuild) is reserved for construction and toggle.
 - Initial session hydration: refreshWidget() is now called once in the constructor (after renderWidget()) to populate existing session data before the first recordEvent fires
 - isWidgetElement() O(1) check:  
-- Debounced persist(): batches rapid localStorage writes to a 300 ms trailing call
+- Debounce persist(): batches rapid localStorage writes to a 300 ms trailing call
