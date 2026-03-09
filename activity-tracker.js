@@ -211,7 +211,7 @@ class ActivityTracker {
         page.className = 'event-page';
         page.textContent = event.page || '';
 
-        li.append(type, details, page, time);
+        li.append(type, details, time);
         return li;
     }
 

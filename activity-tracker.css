@@ -71,8 +71,11 @@
   padding: 6px 0;
   border-bottom: 1px solid #eee;
   display: flex;
-  gap: 1rem;
-  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: flex-start;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 
@@ -99,11 +102,18 @@
   color: #333;
 }
 
-.event-details { flex: 1; color: #333; }
+.event-details { 
+  flex: 1; 
+  color: #333; 
+  min-width: 0;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
 
 .event-page {
   font-size: 0.75rem;
   color: #999;
   font-style: italic;
-  white-space: nowrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
