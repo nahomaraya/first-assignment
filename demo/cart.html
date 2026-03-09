@@ -82,8 +82,7 @@
             const cartItems = cart.getCart();
             const tbody = document.getElementById('cart-items');
             const total = document.getElementById('cart-total');
-            
-            tbody.innerHTML = '';
+            const fragment = document.createDocumentFragment();
             
             cartItems.forEach(item => {
                 const tr = document.createElement('tr');
@@ -104,9 +103,10 @@
                         <button class="btn btn-secondary" onclick="removeItem('${item.id}')">Remove</button>
                     </td>
                 `;
-                tbody.appendChild(tr);
+                fragment.appendChild(tr);
             });
-            
+
+            tbody.replaceChildren(fragment);
             total.textContent = cart.getTotal().toFixed(2);
         }
 
