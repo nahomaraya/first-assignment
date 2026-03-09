@@ -1,6 +1,6 @@
 // Activity Tracker - Tracks user activity and displays statistics
 import { STORAGE_KEY, MAX_EVENTS, MAX_TIMELINE_DISPLAY } from './constants.js';
-import { formatDuration, formatTimestamp, getPageLabel, getPageName } from './utils.js';
+import { formatDuration, formatTimestamp, getPageLabel } from './utils.js';
 
 class ActivityTracker {
     constructor(options = {}) {
@@ -23,16 +23,28 @@ class ActivityTracker {
         ActivityTracker.instance = this;
     }
 
-     persist() {
-        if (this._persistTimer) clearTimeout(this._persistTimer);
-        this._persistTimer = setTimeout(() => {
-            this._persistTimer = null;
+    persist() {
+        if (this.persistTimer) clearTimeout(this.persistTimer);
+        this.persistTimer = setTimeout(() => {
+            this.persistTimer = null;
             try {
                 localStorage.setItem(this.storageKey, JSON.stringify(this.data));
             } catch (error) {
                 console.error('Failed to persist session:', error);
             }
-        });
+        }, 300);
+    }
+
+    flush() {
+        if (this.persistTimer) {
+            clearTimeout(this._persistTimer);
+            this._persistTimer = null;
+        }
+        try {
+            localStorage.setItem(this.storageKey, JSON.stringify(this.data));
+        } catch (error) {
+            console.error('Failed to persist session:', error);
+        }
     }
 
     //Session Managers
@@ -91,9 +103,9 @@ class ActivityTracker {
         const event = {
             type,
             details,
-            page: getPageName(),
+            page: getPageLabel(),
             timestamp: Date.now()
-        }
+        };
         this.data.events.push(event);
         
         this.data.lastActivityAt = Date.now();
@@ -106,10 +118,10 @@ class ActivityTracker {
         this.updateSessionDuration();
         this.persist();
         this.refreshStats();
-        this.appendEvent();
+        this.appendEvent(event);
     }
 
-    appendEvent(event) {
+     appendEvent(event) {
         if (!this.widgetElements || !this.widgetElements.timelineList) return;
         const list = this.widgetElements.timelineList;
         if (list.firstChild && list.firstChild.textContent.trim() === 'No activity yet.') {
@@ -121,6 +133,8 @@ class ActivityTracker {
         }
     }
 
+
+    ////timer management
     updateDurationDisplay() {
         if (!this.widgetElements || !this.widgetElements.sessionDuration) return;
         this.widgetElements.sessionDuration.textContent = `Duration: ${formatDuration(this.getSessionDurationMs())}`;
@@ -249,6 +263,7 @@ class ActivityTracker {
         document.addEventListener('click', this.handleDocumentClick);
         document.addEventListener('submit', this.handleDocumentSubmit);
         this.widgetElements.toggleBtn.addEventListener('click', this.handleToggleTimeline);
+        window.addEventListener('beforeunload', this.handleBeforeUnload);
     }
 
     isWidgetElement(target) {
@@ -257,6 +272,7 @@ class ActivityTracker {
 
     getClickTargetLabel(target) {
         if (!target || !target.closest) return null;
+
         const element = target.closest('button, a, select, [role="button"], [data-track-click]');
         if (!element) return null;
 
@@ -274,7 +290,6 @@ class ActivityTracker {
         }
         return `User clicked "${label}"`;
     }
-
     handleDocumentClick = (e) => {
         if (this.isWidgetElement(e.target)) return;
         const label = this.getClickTargetLabel(e.target);
@@ -293,6 +308,10 @@ class ActivityTracker {
         this.data.toggleTimeline = !this.data.toggleTimeline;
         this.persist();
         this.refreshWidget();
+    }
+
+    handleBeforeUnload = () => {
+        this.flush()
     }
   
 }
